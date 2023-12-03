@@ -1,18 +1,44 @@
 import Todo from "./components/Todo";
 import Form from "./components/Form";
 import FilterButton from "./components/FilterButton";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
+
+// defining outside App() cause if defined inside, recalculated every time the <App /> renders
+const FILTER_MAP = {
+  All: () => true,
+  Active: (task) => !task.completed,
+  Completed: (task) => task.completed,
+};
+const FILTER_NAMES = Object.keys(FILTER_MAP);
+
+function usePrevious(value) {
+  const ref = useRef();
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref.current;
+};
 
 function App(props) {
 
   const [tasks, setTasks] = useState(props.tasks); // setting the init value from prop
   let yetToDoCount = tasks.filter(task => task.completed === false).length;
-  // update the UI based on change in the state of todo List
-  let taskList = tasks?.map(task => {
+  const [filter, setFilter] = useState("All");
+  const listHeadingRef = useRef(null);
+
+
+  // update the UI based on change in the state of todo List 
+  // Best logic useful in future
+  const taskList = tasks?.filter(FILTER_MAP[filter]).map(task => {
     return <Todo key={task.id} id={task.id} completed={task.completed} name={task.name}
       toggleTaskCompleted={toggleTaskCompleted} editTask={handleEditTask} deleteTask={handleDeleteTask} />
   });
+  const filterList = FILTER_NAMES.map((name) => (
+    <FilterButton key={name} name={name} isPressed={name === filter}
+      setFilter={setFilter} />
+  ));
+
 
   function addTask(name) {
     const newTask = { id: `todo-${nanoid()}`, name: name, completed: false };
@@ -45,16 +71,24 @@ function App(props) {
     setTasks(updatedTasks);
   }
 
+  // to focus on the task list header after deleting the task
+  const prevTaskLength = usePrevious(tasks.length);
+  useEffect(() => {
+    if (tasks.length - prevTaskLength === -1) {
+      listHeadingRef.current.focus();
+    }
+  }, [tasks.length, prevTaskLength]);
+  
   return (
     <div className="todoapp stack-large">
       <h1>TodoMatic</h1>
       <Form addTask={addTask} />
       <div className="filters btn-group stack-exception">
-        <FilterButton />
-        <FilterButton />
-        <FilterButton />
+        {/* filter buttons rendered after maping above */}
+        {filterList}
       </div>
-      <h2 id="list-heading"> {yetToDoCount} tasks remaining</h2>
+      {/* Only apply a tabindex to an element when you're absolutely sure that making it focusable will benefit your user in some way */}
+      <h2 ref={listHeadingRef} tabIndex="-1" id="list-heading"> {yetToDoCount} tasks remaining</h2>
       <ul
         role="list"
         className="todo-list stack-large stack-exception"

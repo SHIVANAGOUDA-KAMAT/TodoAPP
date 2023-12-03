@@ -1,8 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+
+function usePrevious(value) {
+  const ref = useRef();
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref.current;
+};
 
 export default function Todo(props) {
   const [isEditing, setEditing] = useState(false);
   const [newName, setNewName] = useState('');
+  const editFieldRef = useRef(null); //I have attached this to edit input field using [ref] attribute
+  const editButtonRef = useRef(null); //I have attached this to edit button using [ref] attribute
+  const wasEditing = usePrevious(isEditing);
+
 
   // called on input change to update the state value
   function handleEditName(e) {
@@ -23,7 +35,7 @@ export default function Todo(props) {
         <label className="todo-label" htmlFor={props.id}>
           New name for {props.name}
         </label>
-        <input value={newName} onChange={handleEditName} id={props.id} className="todo-text" type="text" />
+        <input ref={editFieldRef} value={newName} onChange={handleEditName} id={props.id} className="todo-text" type="text" />
       </div>
       <div className="btn-group">
         <button onClick={() => setEditing(false)} type="button" className="btn todo-cancel">
@@ -51,7 +63,7 @@ export default function Todo(props) {
         </label>
       </div>
       <div className="btn-group">
-        <button type="button" className="btn"
+        <button ref={editButtonRef} type="button" className="btn"
           onClick={() => setEditing(true)}>
           Edit <span className="visually-hidden">{props.name}</span>
         </button>
@@ -64,6 +76,16 @@ export default function Todo(props) {
       </div>
     </div >
   );
+
+  useEffect(() => {
+    if (!wasEditing && isEditing) {
+      editFieldRef.current.focus();
+    }
+    if (wasEditing && !isEditing) {
+      editButtonRef.current.focus();
+    }
+  }, [wasEditing, isEditing]);  
+  // 2nd array param is a list of values useEffect() should depend on. With these values included, useEffect() will only run when one of those values changes.
 
   return <li className="todo">{isEditing ? editingTemplate : viewTemplate}</li>;
 }
